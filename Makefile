@@ -1,12 +1,5 @@
-CC=g++
-CFLAGS=-Wall -Werror 
-
-BIN=main
-EXE=shearsort
-EXT=cpp
-
-make: $(BIN).$(EXT)
-	$(CC) $(BIN).$(EXT) $(CFLAGS) -o $(EXE)
+make: main.cpp
+	g++ main.cpp -o shearsort
 
 clean:
-	rm -f $(EXE)
+	rm -f shearsort
