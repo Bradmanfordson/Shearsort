@@ -1,16 +1,17 @@
 #include <iostream>
 #include <fstream>
 #include <array>
+#include <iomanip>
 using namespace std;
 
 void bubble();
 void sortdown();
-
+void shearsort();
 void readMatrix();
 void printMatrix();
 
-int matrix[4][4];
 int matrixSize = 4;
+int matrix[4][4];
 
 int main()
 {
@@ -21,8 +22,14 @@ int main()
 	printMatrix();
 	cout << endl;
 
-	int x;
+	shearsort();
 
+	return 0;
+}
+
+void shearsort()
+{
+	int x;
 	for (x = 0; x < matrixSize + 1; x++)
 	{
 		if (x % 2 == 0)
@@ -39,8 +46,6 @@ int main()
 		printMatrix();
 		cout << endl;
 	}
-
-	return 0;
 }
 
 void sortdown()
@@ -109,8 +114,7 @@ void printMatrix()
 	{
 		for (int j = 0; j < matrixSize; ++j)
 		{
-			cout << matrix[i][j];
-			cout << " ";
+			cout << setw(2) << matrix[i][j] << " ";
 		}
 		cout << endl;
 	}
