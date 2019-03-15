@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 #include <math.h>
+#include <mutex>
 
 #include <sstream>
 #include <vector>
@@ -21,9 +22,11 @@ int cols();
 int n;
 int complete = 0;
 int **matrix;
+int phases = 0;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t *cond;
+// std::mutex mutex;
+// pthread_cond_t *cond;
 
 /* Main():
 	1. Read the matrix from the file\
@@ -55,20 +58,30 @@ int main()
 	std::cout << std::endl;
 
 	pthread_t *threads;
-	cond = (pthread_cond_t *)malloc(n * sizeof(pthread_cond_t));
 	threads = (pthread_t *)malloc(n * sizeof(pthread_t));
 
-	for (int x = 0; x < n; x++)
+	// while (phases < log2(n * n) + 1)
+	while (phases < 1)
 	{
-		pthread_create(&threads[x], NULL, shearsort, &x);
+		for (int x = 0; x < n; x++)
+		{
+			pthread_create(&threads[x], NULL, shearsort, &x);
+		}
+
+		std::cout << "Phase: " << phases + 1 << std::endl;
+		std::cout << "--------" << std::endl;
+		printMatrix();
+		std::cout << std::endl;
+
+		phases++;
 	}
 
 	for (int i = 0; i < n; i++)
 	{
 		pthread_join(threads[i], NULL);
 	}
+
 	pthread_mutex_destroy(&mutex);
-	pthread_cond_destroy(cond);
 
 	return 0;
 }
@@ -77,72 +90,49 @@ int main()
 
 void *shearsort(void *arg)
 {
+	pthread_mutex_lock(&mutex);
+
 	int index = *((int *)arg);
 	index = index - 1;
 
-	for (int phase = 0; phase < log2(n * n) + 1; phase++)
+	if (phases % 2 == 0) // Alternating Bubble sort Phase
 	{
-		if (phase % 2 == 0) // Alternating Bubble sort Phase
+		for (int i = 0; i < n - 1; i++)
 		{
-			for (int i = 0; i < n - 1; i++)
+			for (int col = 0; col < n - i - 1; col++)
 			{
-				for (int col = 0; col < n - i - 1; col++)
+				if (index % 2 == 0)
 				{
-					if (index % 2 == 0)
+					if (matrix[index][col] > matrix[index][col + 1])
 					{
-						if (matrix[index][col] > matrix[index][col + 1])
-						{
-							swap(index, col);
-						}
+						swap(index, col);
 					}
-					else
+				}
+				else
+				{
+					if (matrix[index][col] < matrix[index][col + 1])
 					{
-						if (matrix[index][col] < matrix[index][col + 1])
-						{
-							swap(index, col);
-						}
+						swap(index, col);
 					}
 				}
 			}
 		}
-		else // Column sort Phase
-		{
-			for (int i = 0; i < n - 1; i++)
-			{
-				for (int row = 0; row < n - i - 1; row++)
-				{
-					if (matrix[row][index] > matrix[row + 1][index])
-					{
-						swapCol(row, index);
-					}
-				}
-			}
-		}
-
-		// Wait for all threads to finish before starting next phase
-		pthread_mutex_lock(&mutex);
-		complete++;
-
-		if (complete == n) // When all threads have completed, print matrix, signal conditions, and set complete to 0
-		{
-			std::cout << "Phase: " << phase + 1 << std::endl;
-			std::cout << "--------" << std::endl;
-			printMatrix();
-			std::cout << std::endl;
-
-			for (int i = 0; i < n; i++)
-			{
-				pthread_cond_signal(&cond[i]);
-			}
-
-			complete = 0;
-		}
-		else // While all threads aren't complete, wait on the condition
-		{
-			pthread_cond_wait(&cond[index], &mutex);
-		}
-		pthread_mutex_unlock(&mutex);
 	}
+	else // Column sort Phase
+	{
+		for (int i = 0; i < n - 1; i++)
+		{
+			for (int row = 0; row < n - i - 1; row++)
+			{
+				if (matrix[row][index] > matrix[row + 1][index])
+				{
+					swapCol(row, index);
+				}
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&mutex);
 	pthread_exit(0);
 }
 
