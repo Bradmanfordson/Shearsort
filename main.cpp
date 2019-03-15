@@ -4,17 +4,23 @@
 #include <iomanip>
 #include <math.h>
 
+#include <sstream>
+#include <vector>
+#include <iterator>
+
 /* Function Definitions */
 void *shearsort(void *arg);
 void swap(int index, int col);
 void swapCol(int row, int index);
 void printMatrix();
 void readMatrix();
+int rows();
+int cols();
 
 /* Global Variables */
-int n = 4;
+int n;
 int complete = 0;
-int matrix[4][4];
+int **matrix;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t *cond;
@@ -28,7 +34,19 @@ pthread_cond_t *cond;
 */
 int main()
 {
-	pthread_t *threads;
+	if (rows() != cols()) // If matrix isn't square then exit program with error.
+	{
+		std::cout << "Matrix Dimention Error." << std::endl;
+		return -1;
+	}
+
+	n = rows();
+
+	matrix = new int *[n];
+	for (int i = 0; i < n; i++)
+	{
+		matrix[i] = new int[n];
+	}
 	readMatrix();
 
 	std::cout << "Input Array:" << std::endl;
@@ -36,6 +54,7 @@ int main()
 	printMatrix();
 	std::cout << std::endl;
 
+	pthread_t *threads;
 	cond = (pthread_cond_t *)malloc(n * sizeof(pthread_cond_t));
 	threads = (pthread_t *)malloc(n * sizeof(pthread_t));
 
@@ -173,4 +192,31 @@ void readMatrix()
 			file >> matrix[i][j];
 		}
 	}
+}
+
+int rows()
+{
+	int lines = 0;
+	std::string line;
+	std::ifstream file("input.txt");
+
+	while (std::getline(file, line))
+	{
+		lines++;
+	}
+
+	return lines;
+}
+
+int cols()
+{
+	int words;
+	std::string line;
+	std::ifstream file("input.txt");
+
+	std::getline(file, line);
+	std::stringstream stream(line);
+	words = std::distance(std::istream_iterator<std::string>(stream), std::istream_iterator<std::string>());
+
+	return words;
 }
