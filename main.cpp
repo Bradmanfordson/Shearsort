@@ -2,110 +2,135 @@
 #include <fstream>
 #include <array>
 #include <iomanip>
-using namespace std;
+#include <math.h>
 
-void bubble();
-void sortdown();
-void shearsort();
+void *shearsort(void *arg);
+
 void readMatrix();
 void printMatrix();
 
+void swap(int index, int col);
+void swapCol(int row, int index);
+
 int matrixSize = 4;
 int matrix[4][4];
+
+int complete = 0;
+
+pthread_cond_t *cond;
+
+pthread_mutex_t mutex;
+pthread_t *threads;
 
 int main()
 {
 	readMatrix();
 
-	cout << "INPUT ARRAY:" << endl;
-	cout << "------------" << endl;
+	std::cout << "INPUT ARRAY:" << std::endl;
+	std::cout << "------------" << std::endl;
 	printMatrix();
-	cout << endl;
+	std::cout << std::endl;
 
-	shearsort();
+	cond = (pthread_cond_t *)malloc(matrixSize * sizeof(pthread_cond_t));
+	threads = (pthread_t *)malloc(matrixSize * sizeof(pthread_t));
+
+	for (int x = 0; x < matrixSize; x++)
+	{
+		pthread_create(&threads[x], NULL, shearsort, &x);
+		// shearsort(&x);
+	}
+
+	for (int i = 0; i < matrixSize; i++)
+	{
+		pthread_join(threads[i], NULL);
+	}
 
 	return 0;
 }
 
-void shearsort()
+void *shearsort(void *arg)
 {
-	int x;
-	for (x = 0; x < matrixSize + 1; x++)
+	int index = *((int *)arg);
+
+	for (int phase = 0; phase < log2(matrixSize * matrixSize) + 1; phase++)
 	{
-		if (x % 2 == 0)
+		if (phase % 2 == 0) // Alternating Bubble sort Phase
 		{
-			bubble();
+			for (int i = 0; i < matrixSize - 1; i++)
+			{
+				for (int col = 0; col < matrixSize - i - 1; col++)
+				{
+					if (index % 2 == 0)
+					{
+						if (matrix[index][col] > matrix[index][col + 1])
+						{
+							swap(index, col);
+							std::cout << "TEST1" << std::endl;
+						}
+					}
+					else
+					{
+						if (matrix[index][col] < matrix[index][col + 1])
+						{
+							swap(index, col);
+							std::cout << "TEST2" << std::endl;
+						}
+					}
+				}
+			}
+		}
+		else // Column sort Phase
+		{
+			std::cout << "TEST4" << std::endl;
+			for (int i = 0; i < matrixSize - 1; i++)
+			{
+				for (int row = 0; row < matrixSize - i - 1; row++)
+				{
+					if (matrix[row][index] > matrix[row + 1][index])
+					{
+						std::cout << "TEST3" << std::endl;
+						swapCol(row, index);
+					}
+				}
+			}
+		}
+
+		// Wait for all threads to finish before starting next phase
+		std::cout << "TEST6" << std::endl;
+		pthread_mutex_lock(&mutex);
+		complete++;
+		if (complete != matrixSize)
+		{
+			pthread_cond_wait(&cond[index], &mutex);
 		}
 		else
 		{
-			sortdown();
+			std::cout << "Phase: " << phase + 1 << std::endl;
+			std::cout << "--------" << std::endl;
+			printMatrix();
+			for (int i = 0; i < matrixSize; i++)
+			{
+				pthread_cond_signal(&cond[i]);
+			}
+			complete = 0;
 		}
-
-		cout << "Phase " << x + 1 << ":" << endl;
-		cout << "--------" << endl;
-		printMatrix();
-		cout << endl;
+		pthread_mutex_unlock(&mutex);
 	}
+	pthread_exit(0);
 }
 
-void sortdown()
+void swap(int index, int col)
 {
-	int x, y, z;
-	int count = 0;
-
-	while (count < matrixSize - 1)
-	{
-
-		for (x = 0; x < matrixSize - 1; x++)
-		{
-			for (y = 0; y < matrixSize; y++)
-			{
-				if (matrix[x][y] > matrix[x + 1][y])
-				{
-					int temp = matrix[x][y];
-					matrix[x][y] = matrix[x + 1][y];
-					matrix[x + 1][y] = temp;
-				}
-			}
-		}
-		count++;
-	}
+	int temp = matrix[index][col];
+	matrix[index][col] = matrix[index][col + 1];
+	matrix[index][col + 1] = temp;
 }
 
-void bubble()
+void swapCol(int row, int index)
 {
-	int x, y, z;
-	int count = 0;
-
-	while (count < matrixSize - 1)
-	{
-
-		for (x = 0; x < matrixSize; x++)
-		{
-			for (y = 0; y < matrixSize - 1; y++)
-			{
-				if (x % 2 == 0)
-				{
-					if (matrix[x][y] > matrix[x][y + 1])
-					{
-						int temp = matrix[x][y];
-						matrix[x][y] = matrix[x][y + 1];
-						matrix[x][y + 1] = temp;
-					}
-				}
-				else
-				{
-					if (matrix[x][y] < matrix[x][y + 1])
-					{
-						int temp = matrix[x][y];
-						matrix[x][y] = matrix[x][y + 1];
-						matrix[x][y + 1] = temp;
-					}
-				}
-			}
-		}
-		count++;
-	}
+	int temp = matrix[row][index];
+	matrix[row][index] = matrix[row + 1][index];
+	matrix[row + 1][index] = temp;
 }
 
 void printMatrix()
@@ -114,15 +139,16 @@ void printMatrix()
 	{
 		for (int j = 0; j < matrixSize; ++j)
 		{
-			cout << setw(2) << matrix[i][j] << " ";
+			std::cout << std::setw(2) << matrix[i][j];
+			std::cout << " ";
 		}
-		cout << endl;
+		std::cout << std::endl;
 	}
 }
 
 void readMatrix()
 {
-	ifstream file("input.txt");
+	std::ifstream file("input.txt");
 
 	for (int i = 0; i < matrixSize; ++i)
 	{
