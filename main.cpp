@@ -16,7 +16,7 @@ int n = 4;
 int complete = 0;
 int matrix[4][4];
 
-pthread_mutex_t mutex;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t *cond;
 
 /* Main():
@@ -48,6 +48,8 @@ int main()
 	{
 		pthread_join(threads[i], NULL);
 	}
+	pthread_mutex_destroy(&mutex);
+	pthread_cond_destroy(cond);
 
 	return 0;
 }
@@ -101,7 +103,8 @@ void *shearsort(void *arg)
 		// Wait for all threads to finish before starting next phase
 		pthread_mutex_lock(&mutex);
 		complete++;
-		if (complete == n)
+
+		if (complete == n) // When all threads have completed, print matrix, signal conditions, and set complete to 0
 		{
 			std::cout << "Phase: " << phase + 1 << std::endl;
 			std::cout << "--------" << std::endl;
@@ -112,9 +115,10 @@ void *shearsort(void *arg)
 			{
 				pthread_cond_signal(&cond[i]);
 			}
+
 			complete = 0;
 		}
-		else
+		else // While all threads aren't complete, wait on the condition
 		{
 			pthread_cond_wait(&cond[index], &mutex);
 		}
