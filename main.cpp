@@ -17,6 +17,9 @@ void printMatrix();
 void readMatrix();
 int rows();
 int cols();
+void sortRow(int index);
+void sortRevRow(int index);
+void sortColumns(int index);
 
 /* Global Variables */
 int n;
@@ -24,19 +27,21 @@ int complete = 0;
 int **matrix;
 int phases = 0;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-// std::mutex mutex;
-// pthread_cond_t *cond;
+pthread_mutex_t mutex;
 
-/* Main():
-	1. Read the matrix from the file\
-	2. Print the matrix
-	3. Create Threads
-	4. Join Threads
-	5. Exit
-*/
 int main()
 {
+	/* Main():
+	1. Check that the input file has a square matrix, if not: exit, else: continue
+	2. Read the matrix from the file
+	3. Print the matrix
+	4. Loop through the phases
+		1. Create Threads
+		2. print phase
+		3. increment phase number
+	5. Join Threads
+	6. Exit
+	*/
 	if (rows() != cols()) // If matrix isn't square then exit program with error.
 	{
 		std::cout << "Matrix Dimention Error." << std::endl;
@@ -60,25 +65,24 @@ int main()
 	pthread_t *threads;
 	threads = (pthread_t *)malloc(n * sizeof(pthread_t));
 
-	// while (phases < log2(n * n) + 1)
-	while (phases < 1)
+	while (phases < log2(n * n) + 1)
 	{
 		for (int x = 0; x < n; x++)
 		{
+			// std::cout << "x: " << x << std::endl;
 			pthread_create(&threads[x], NULL, shearsort, &x);
 		}
 
-		std::cout << "Phase: " << phases + 1 << std::endl;
+		for (int i = 0; i < n; i++)
+		{
+			pthread_join(threads[i], NULL);
+		}
+
+		phases++;
+		std::cout << "Phase: " << phases << std::endl;
 		std::cout << "--------" << std::endl;
 		printMatrix();
 		std::cout << std::endl;
-
-		phases++;
-	}
-
-	for (int i = 0; i < n; i++)
-	{
-		pthread_join(threads[i], NULL);
 	}
 
 	pthread_mutex_destroy(&mutex);
@@ -86,10 +90,9 @@ int main()
 	return 0;
 }
 
-// Shearsort():
-
 void *shearsort(void *arg)
 {
+	// Enter critical section
 	pthread_mutex_lock(&mutex);
 
 	int index = *((int *)arg);
@@ -97,67 +100,86 @@ void *shearsort(void *arg)
 
 	if (phases % 2 == 0) // Alternating Bubble sort Phase
 	{
-		for (int i = 0; i < n - 1; i++)
+		if (index % 2 == 0)
 		{
-			for (int col = 0; col < n - i - 1; col++)
-			{
-				if (index % 2 == 0)
-				{
-					if (matrix[index][col] > matrix[index][col + 1])
-					{
-						swap(index, col);
-					}
-				}
-				else
-				{
-					if (matrix[index][col] < matrix[index][col + 1])
-					{
-						swap(index, col);
-					}
-				}
-			}
+			sortRow(index);
+		}
+		else
+		{
+			sortRevRow(index);
 		}
 	}
 	else // Column sort Phase
 	{
-		for (int i = 0; i < n - 1; i++)
-		{
-			for (int row = 0; row < n - i - 1; row++)
-			{
-				if (matrix[row][index] > matrix[row + 1][index])
-				{
-					swapCol(row, index);
-				}
-			}
-		}
+		sortColumns(index);
 	}
 
+	// Exit critical section so unlock mutex and exit
 	pthread_mutex_unlock(&mutex);
 	pthread_exit(0);
 }
 
-// Swap():
-//	Take in the index value and column and swap two cells next to each other in the matrix
+void sortRow(int index)
+{
+	for (int row = 0; row < n - 1; row++)
+	{
+		for (int col = 0; col < n - row - 1; col++)
+		{
+			if (matrix[index][col] > matrix[index][col + 1])
+			{
+				swap(index, col);
+			}
+		}
+	}
+}
+
+void sortRevRow(int index)
+{
+	for (int row = 0; row < n - 1; row++)
+	{
+		for (int col = 0; col < n - row - 1; col++)
+		{
+			if (matrix[index][col] < matrix[index][col + 1])
+			{
+				swap(index, col);
+			}
+		}
+	}
+}
+
+void sortColumns(int index)
+{
+	for (int col = 0; col < n - 1; col++)
+	{
+		for (int row = 0; row < n - 1; row++)
+		{
+			if (matrix[row][index] > matrix[row + 1][index])
+			{
+				swapCol(row, index);
+			}
+		}
+	}
+}
+
 void swap(int index, int col)
 {
+	//	Take in the index value and column and swap two cells next to each other in the matrix
 	int temp = matrix[index][col];
 	matrix[index][col] = matrix[index][col + 1];
 	matrix[index][col + 1] = temp;
 }
 
-// SwapCol():
-//	Take in the index value and row and swap two cells above/below each other in the matrix
 void swapCol(int row, int index)
 {
+	//	Take in the index value and row and swap two cells above/below each other in the matrix
 	int temp = matrix[row][index];
 	matrix[row][index] = matrix[row + 1][index];
 	matrix[row + 1][index] = temp;
 }
 
-// printMatrix()
-//	Itterate through each element in the matrix and print it to the terminal.
 void printMatrix()
 {
+	//	Itterate through each element in the matrix and print it to the terminal.
 	for (int i = 0; i < n; ++i)
 	{
 		for (int j = 0; j < n; ++j)
@@ -169,10 +191,9 @@ void printMatrix()
 	}
 }
 
-// readmatrix()
-//	Read integers from input.txt and assign them to appropriate cells in the matrix
 void readMatrix()
 {
+	//	Read integers from input.txt and assign them to appropriate cells in the matrix
 	std::ifstream file("input.txt");
 
 	for (int i = 0; i < n; ++i)
@@ -186,6 +207,7 @@ void readMatrix()
 
 int rows()
 {
+	// Read the number of lines in the input file
 	int lines = 0;
 	std::string line;
 	std::ifstream file("input.txt");
@@ -200,6 +222,10 @@ int rows()
 
 int cols()
 {
+	// Found this algorithm online
+	// Read the first line of the file
+	// Counts the number of words in the line
+	// Returns number of words in the line
 	int words;
 	std::string line;
 	std::ifstream file("input.txt");
