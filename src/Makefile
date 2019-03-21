@@ -1,5 +1,5 @@
 make: main.cpp
-	g++ main.cpp -o shearsort
+	g++ main.cpp -lpthread -o shearsort
 
 clean:
 	rm -f shearsort

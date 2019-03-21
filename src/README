@@ -1,0 +1,16 @@
+Multi-Threaded Shearsort Algorithm C++
+--------------------------------------
+AUTHOR
+    Allen Bradley Roberts
+
+NAME
+    shearsort - Runs the shearsort algorithm on a 2D square matrix which is defined in a file labeled "input.txt"
+
+MAKE
+    type "make" in the terminal to create the ./shearsort program.
+    type "make clean" in the terminal to remove old builds of ./shearsort
+
+RUN
+    ./shearsort 
+        This is all that is needed to run Shearsort.
+        Be sure to include the input.txt file with a square matrix.
