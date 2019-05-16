@@ -103,7 +103,6 @@ int main()
 		printMatrix();
 		std::cout << std::endl;
 	}
-
 	// clean up memory
 	pthread_mutex_destroy(&mutex);
 
